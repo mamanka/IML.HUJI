@@ -131,3 +131,5 @@ class LDA(BaseEstimator):
             Performance under missclassification loss function
         """
         return (IMLearn.metrics.loss_functions.misclassification_error(y, self.predict(X)))
+        raise NotImplementedError()
+
