@@ -53,11 +53,11 @@ class UnivariateGaussian:
         """
 
         self.fitted_ = True
-        self.mu_ = X.mean()
         if not self.biased_:  #check if we want biased
             self.var_ = X.var(ddof = 1) # if unbiased - divide by m-1
         else:
             self.var_ = X.var(ddof = 0) ## else divide by m to
+        self.mu_ = X.mean()
         return self
 
     def pdf(self, X: np.ndarray) -> np.ndarray:

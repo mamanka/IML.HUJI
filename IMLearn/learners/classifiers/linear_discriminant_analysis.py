@@ -1,7 +1,10 @@
 from typing import NoReturn
+
+import IMLearn.metrics.loss_functions
 from ...base import BaseEstimator
 import numpy as np
 from numpy.linalg import det, inv
+import pandas as pd
 
 
 class LDA(BaseEstimator):
@@ -25,6 +28,7 @@ class LDA(BaseEstimator):
     self.pi_: np.ndarray of shape (n_classes)
         The estimated class probabilities. To be set in `GaussianNaiveBayes.fit`
     """
+
     def __init__(self):
         """
         Instantiate an LDA classifier
@@ -46,7 +50,14 @@ class LDA(BaseEstimator):
         y : ndarray of shape (n_samples, )
             Responses of input data to fit to
         """
-        raise NotImplementedError()
+        x_df = pd.DataFrame(X)
+        y_df = pd.DataFrame(y)
+        concetenated_df = pd.concat([y_df, x_df], ignore_index=True, axis=1)
+        self.mu_ = concetenated_df.groupby(by = 0).mean().to_numpy()
+        self.cov_ = x_df.cov().to_numpy()
+        self._cov_inv = np.linalg.inv(self.cov_)
+        self.pi_ = concetenated_df.groupby(by = 0).size(). to_numpy() /concetenated_df.shape[0]
+        self.classes_ = concetenated_df[0].unique()
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -62,8 +73,12 @@ class LDA(BaseEstimator):
         responses : ndarray of shape (n_samples, )
             Predicted responses of given samples
         """
-        raise NotImplementedError()
-
+        likelihood = self.likelihood(X)
+        prediction = np.array([])
+        for ll in likelihood:
+            predicted_sample = np.argmax(ll)
+            prediction = np.hstack((prediction,predicted_sample))
+        return prediction
     def likelihood(self, X: np.ndarray) -> np.ndarray:
         """
         Calculate the likelihood of a given data over the estimated model
@@ -81,8 +96,22 @@ class LDA(BaseEstimator):
         """
         if not self.fitted_:
             raise ValueError("Estimator must first be fitted before calling `likelihood` function")
-
-        raise NotImplementedError()
+        det_cov = np.linalg.det(self.cov_)
+        d = X.shape[1]
+        const_term = 1/np.sqrt(((np.pi * 2) ** d) * det_cov)
+        likelihood = None
+        for sample in X:
+            sample_lilkelihood = np.array([])
+            for k in self.classes_:
+                exp_term = (np.transpose(sample - self.mu_[int(k)])@self._cov_inv @
+                            (sample - self.mu_[int(k)]))
+                sample_lilkelihood = np.hstack((sample_lilkelihood, const_term *
+                                                np.exp(-0.5 * exp_term) * self.pi_[int(k)]))
+            if likelihood is not None:
+                likelihood = np.vstack((likelihood, sample_lilkelihood))
+            else:
+                likelihood = sample_lilkelihood
+        return likelihood
 
     def _loss(self, X: np.ndarray, y: np.ndarray) -> float:
         """
@@ -101,4 +130,4 @@ class LDA(BaseEstimator):
         loss : float
             Performance under missclassification loss function
         """
-        raise NotImplementedError()
+        return (IMLearn.metrics.loss_functions.misclassification_error(y, self.predict(X)))
