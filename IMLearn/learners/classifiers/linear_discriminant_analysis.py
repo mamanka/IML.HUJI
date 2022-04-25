@@ -54,10 +54,16 @@ class LDA(BaseEstimator):
         y_df = pd.DataFrame(y)
         concetenated_df = pd.concat([y_df, x_df], ignore_index=True, axis=1)
         self.mu_ = concetenated_df.groupby(by = 0).mean().to_numpy()
-        self.cov_ = x_df.cov().to_numpy()
+        self.classes_ = np.unique(y)
+        cov = np.zeros(shape=(X.shape[1], X.shape[1]))
+        for i, row in enumerate(X):
+            mu = self.mu_[self.classes_ == y[i]]
+            mat = row - mu
+            res = np.matmul(np.transpose(mat), mat)
+            cov += res
+        self.cov_ = cov / (len(y) - len(self.classes_))
         self._cov_inv = np.linalg.inv(self.cov_)
         self.pi_ = concetenated_df.groupby(by = 0).size(). to_numpy() /concetenated_df.shape[0]
-        self.classes_ = concetenated_df[0].unique()
 
     def _predict(self, X: np.ndarray) -> np.ndarray:
         """
@@ -131,5 +137,4 @@ class LDA(BaseEstimator):
             Performance under missclassification loss function
         """
         return (IMLearn.metrics.loss_functions.misclassification_error(y, self.predict(X)))
-        raise NotImplementedError()
 

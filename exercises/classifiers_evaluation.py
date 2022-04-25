@@ -1,10 +1,11 @@
+import numpy as np
+
 import IMLearn.metrics
 from IMLearn.learners.classifiers import Perceptron, LDA, GaussianNaiveBayes
 from typing import Tuple
 from utils import *
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-<<<<<<< HEAD
 from utils import custom
 from math import atan2, pi
 from utils import *
@@ -14,10 +15,8 @@ import plotly.express as px
 
 FILE_STATIC = "../datasets/{f}"
 model_names = ['LDA', 'Bayes Naive Gaussian']
-symbols = ['circle', 'x', 'diamond']
-=======
 from math import atan2, pi
->>>>>>> 4906fe11d6c1e17d1adc9f8e4ae352250116f410
+from IMLearn.metrics import accuracy
 
 
 def load_dataset(filename: str) -> Tuple[np.ndarray, np.ndarray]:
@@ -39,15 +38,8 @@ def load_dataset(filename: str) -> Tuple[np.ndarray, np.ndarray]:
         Class vector specifying for each sample its class
 
     """
-<<<<<<< HEAD
-    dataset = np.load(filename)
-    x_array = dataset[:, 0:2]
-    y = dataset[:, 2]
-    return x_array, y
-=======
     data = np.load(filename)
     return data[:, :2], data[:, 2].astype(int)
->>>>>>> 4906fe11d6c1e17d1adc9f8e4ae352250116f410
 
 
 def run_perceptron():
@@ -63,7 +55,6 @@ def run_perceptron():
         X, response = load_dataset(FILE_STATIC.format(f=f))
         # Fit Perceptron and record loss in each fit iteration
         losses = []
-<<<<<<< HEAD
         perceptron = Perceptron()
         perceptron.fit(X, response)
         scatter_plot = px.line(x=range(len(perceptron.loss_evaluation)), y=perceptron.loss_evaluation,
@@ -71,37 +62,8 @@ def run_perceptron():
                                    seperability=n))
         scatter_plot.update_layout(xaxis_title="Iterations", yaxis_title="Loss")
         # scatter_plot.show()
-=======
-        raise NotImplementedError()
 
         # Plot figure of loss as function of fitting iteration
-        raise NotImplementedError()
->>>>>>> 4906fe11d6c1e17d1adc9f8e4ae352250116f410
-
-
-def get_ellipse(mu: np.ndarray, cov: np.ndarray):
-    """
-    Draw an ellipse centered at given location and according to specified covariance matrix
-
-    Parameters
-    ----------
-    mu : ndarray of shape (2,)
-        Center of ellipse
-
-    cov: ndarray of shape (2,2)
-        Covariance of Gaussian
-
-    Returns
-    -------
-        scatter: A plotly trace object of the ellipse
-    """
-    l1, l2 = tuple(np.linalg.eigvalsh(cov)[::-1])
-    theta = atan2(l1 - cov[0, 0], cov[0, 1]) if cov[0, 1] != 0 else (np.pi / 2 if cov[0, 0] < cov[1, 1] else 0)
-    t = np.linspace(0, 2 * pi, 100)
-    xs = (l1 * np.cos(theta) * np.cos(t)) - (l2 * np.sin(theta) * np.sin(t))
-    ys = (l1 * np.sin(theta) * np.cos(t)) + (l2 * np.cos(theta) * np.sin(t))
-
-    return go.Scatter(x=mu[0] + xs, y=mu[1] + ys, mode="lines", marker_color="black")
 
 
 def compare_gaussian_classifiers():
@@ -111,20 +73,49 @@ def compare_gaussian_classifiers():
     for f in ["gaussian1.npy", "gaussian2.npy"]:
         # Load dataset
         X, response = load_dataset(FILE_STATIC.format(f=f))
-        lda = LDA()
-        lda.fit(X, response)
+        lims = np.array([X.min(axis=0), X.max(axis=0)]).T + np.array([-.4, .4])
+        symbols = np.array(['square', 'circle', 'triangle-up'])
+        models = [LDA(),GaussianNaiveBayes()]
+        accuracies = []
+        from IMLearn.metrics import accuracy
+
+        for model in models:
+            model.fit(X,response)
+            accuracies.append(accuracy(response, model.predict(X)))
+
+        subplots = make_subplots(rows=1, cols=2, subplot_titles=[f"LDA- Accuracy: {accuracies[0]}",
+                                                                 f"Gaussian Naive Bayes - Accuracy: {accuracies[1]}"],
+                                 horizontal_spacing=0.01, vertical_spacing=.03)
+        for i, m in enumerate(models):
+            subplots.add_traces([decision_surface(m.fit(X, response).predict, lims[0], lims[1], showscale=False),
+                                 go.Scatter(x=X[:, 0], y=X[:, 1], mode="markers", showlegend=False,
+                                            marker=dict(color=m.predict(X), symbol= symbols[response], size=10,
+                                                        colorscale=[custom[0], custom[-1], custom[1]],
+                                                        line=dict(color='black', width=1)))],
+                                rows =1 , cols = i+1)
+            points = []
+            ellipsis = []
+            traces = []
+            for i, mu in enumerate(m.mu_):
+                points.append (mu)
+                if isinstance(m, LDA):
+                    cov = m.cov_
+                ellipsis = get_ellipse(mu, cov)
+                traces.append(ellipsis)
+
+            centers = np.array(points)
+            s = go.Scatter(x= centers[:,0], y= centers[:,1], mode = 'markers',
+                                marker = dict (color = 'black', symbol = 'x', size = 15), showlegend = False)
+            traces.append(s)
+            subplots.add_traces(traces)
+
+        subplots.update_layout(title_text = "Decision boundry of Models {f} Dataset".format(f=f), title_font_size = 20)
+        subplots.show()
 
         # Fit models and predict over training set
-        prediction_array = np.array([])
-        prediction_array = lda.predict(X)
-        subplots = make_subplots(rows=1, cols=2, subplot_titles=[rf"$\textbf{{{m}}}$" for m in model_names],
-                                 horizontal_spacing=0.01, vertical_spacing=.03)
-        scatter = go.Figure(data=[go.Scatter(x=X[:, 0], y=X[:, 1], mode="markers", showlegend=False,
-                                             marker=dict(color=response, symbol=symbols, size=20,
-                                                         colorscale=[custom[0], custom[-1], custom[1]],
-                                                         line=dict(color='black', width=1)))])
-        scatter_x0_lim = scatter.get_xlim
-        scatter.show()
+        # prediction_array = np.array([])
+        # prediction_array = lda.predict(X)
+
         # for i,m in enumerate ()
         # sample_scatter_plot = px.scatter(x=X ,y = response)
         # sample_scatter_plot.update_traces (mode = 'markers')
@@ -134,16 +125,15 @@ def compare_gaussian_classifiers():
         # on the right. Plot title should specify dataset used and subplot titles should specify algorithm and accuracy
         # Create subplots
         from IMLearn.metrics import accuracy
-        raise NotImplementedError()
 
         # Add traces for data-points setting symbols and colors
-        raise NotImplementedError()
+    raise NotImplementedError()
 
         # Add `X` dots specifying fitted Gaussians' means
-        raise NotImplementedError()
+    raise NotImplementedError()
 
         # Add ellipses depicting the covariances of the fitted Gaussians
-        raise NotImplementedError()
+    raise NotImplementedError()
 
 
 def get_ellipse(mu: np.ndarray, cov: np.ndarray):
@@ -165,7 +155,7 @@ def get_ellipse(mu: np.ndarray, cov: np.ndarray):
     xs = (l1 * np.cos(theta) * np.cos(t)) - (l2 * np.sin(theta) * np.sin(t))
     ys = (l1 * np.sin(theta) * np.cos(t)) + (l2 * np.cos(theta) * np.sin(t))
 
-    return go.Scatter(x=mu[0] + xs, y=mu[1] + ys, mode="lines", marker_color="black")
+    return go.Scatter(x=mu[0] + xs, y=mu[1] + ys, mode="lines", marker_color="black", showlegend= False)
 
 
 if __name__ == '__main__':

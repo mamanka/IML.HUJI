@@ -45,6 +45,8 @@ def misclassification_error(y_true: np.ndarray, y_pred: np.ndarray, normalize: b
     else:
         return (array_to_check < 0).sum()
 
+
+
 def accuracy(y_true: np.ndarray, y_pred: np.ndarray) -> float:
     """
     Calculate accuracy of given predictions
